@@ -1,5 +1,7 @@
-    import pymodbus
-
+import pymodbus
+import logging
+import json
+import getmac
 #from pymodbus.client.sync import ModbusSerialClient as ModbusClient
 #from pymodbus.register_read_message import ReadInputRegistersResponse
 #client = ModbusClient(method='rtu', port='/dev/ttyUSB0', stopbits=1, bytesize=8, parity='N', baudrate = '9600', timeout=0.3)
@@ -18,25 +20,31 @@ from pymodbus.transaction import (ModbusRtuFramer,
                                   ModbusAsciiFramer,
                                   ModbusBinaryFramer)
 from custom_message import CustomModbusRequest
+from getmac import get_mac_address as gma
 
 # --------------------------------------------------------------------------- #
 # configure the service logging
 # --------------------------------------------------------------------------- #
-import logging
 FORMAT = ('%(asctime)-15s %(threadName)-15s'
           ' %(levelname)-8s %(module)-15s:%(lineno)-8s %(message)s')
 logging.basicConfig(format=FORMAT)
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
-
-
+exceptionJson = [0]*100
+GMA = gma()
 def run_server():
-
+	
+    try json_file = open("data.json", "r")
+	data = json.load(json_file)
+	data_array = data['data_array']
+    except:
+	data_array = exceptionJson
+    
     store = ModbusSlaveContext(
-        di=ModbusSequentialDataBlock(0, [18]*100),
-        co=ModbusSequentialDataBlock(0, [18]*100),
-        hr=ModbusSequentialDataBlock(0, [18]*100),
-        ir=ModbusSequentialDataBlock(0, [18]*100))
+        di=ModbusSequentialDataBlock(0, [0]*100),
+        co=ModbusSequentialDataBlock(0, [0]*100),
+        hr=ModbusSequentialDataBlock(0, data_array),
+        ir=ModbusSequentialDataBlock(0, [0]*100))
 
     context = ModbusServerContext(slaves=store, single=True)
 
@@ -63,14 +71,16 @@ def run_server():
     # StartTcpServer(context, identity=identity, address=("localhost", 5020),
     #                framer=ModbusRtuFramer)
 
-    # UDP Server
-    # StartUdpServer(context, identity=identity, address=("127.0.0.1", 5020))
-
     # RTU Server
     # StartSerialServer(context, identity=identity,
     #                   port='/dev/ttyp0', framer=ModbusRtuFramer)
 
-if __name__ == "__main__":
+    exceptionJson = data_array
+    with open("data.json", "w") as outfile:
+	json.dump(data, outfile)
+
+#if __name__ == "__main__":
+while True:
     run_server()
 
 
